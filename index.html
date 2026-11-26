@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Thanksgiving Harvest Words</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            background: radial-gradient(circle at center, #92400e 0%, #451a03 100%);
+        }
+
+        h1, .game-font {
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        /* Ambient falling leaves */
+        .leaf {
+            position: absolute;
+            top: -10%;
+            pointer-events: none;
+            animation: fall linear infinite;
+            opacity: 0.3;
+            font-size: 1.5rem;
+            z-index: 0;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-20px) rotate(0deg) translateX(0); }
+            50% { transform: translateY(50vh) rotate(180deg) translateX(30px); }
+            100% { transform: translateY(110vh) rotate(360deg) translateX(-30px); }
+        }
+
+        /* Polished Grid Tiles */
+        .tile {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            border-radius: 8px;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            user-select: none;
+        }
+
+        .tile-hidden {
+            background: rgba(120, 53, 15, 0.4);
+            border: 2px solid rgba(180, 83, 9, 0.4);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+            color: transparent;
+        }
+
+        .tile-revealed {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            border: 2px solid #fde68a;
+            color: #fff;
+            box-shadow: 
+                0 4px 6px -1px rgba(0, 0, 0, 0.3),
+                0 2px 4px -1px rgba(0, 0, 0, 0.2),
+                inset 0 2px 4px rgba(255, 255, 255, 0.4);
+            text-shadow: 0 2px 3px rgba(120, 53, 15, 0.6);
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pop { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        /* Shake for wrong words */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+        .shake {
+            animation: shake 0.4s ease-in-out;
+            color: #ef4444 !important;
+            text-shadow: 0 0 10px rgba(239,68,68,0.5) !important;
+        }
+
+        /* The Big Wood/Pie Circle */
+        .big-circle {
+            background: radial-gradient(circle at center, #573312 0%, #3b1e06 100%);
+            box-shadow: 
+                inset 0 0 40px rgba(0,0,0,0.9),
+                0 15px 35px rgba(0,0,0,0.6),
+                0 0 0 8px #78350f, 
+                0 0 0 14px #451a03; 
+            border-radius: 50%;
+        }
+
+        /* Letter Nodes on the Circle */
+        .letter-node {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            color: #fde68a;
+            text-shadow: 0 3px 6px rgba(0,0,0,0.9);
+            transition: all 0.2s ease;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .letter-node.selected {
+            color: #fff;
+            text-shadow: 
+                0 0 15px #f59e0b, 
+                0 0 30px #f59e0b,
+                0 3px 6px rgba(0,0,0,0.5);
+            transform: translate(-50%, -50%) scale(1.35);
+        }
+
+        /* Enhanced Buttons */
+        .action-btn {
+            background: linear-gradient(to bottom, #92400e, #78350f);
+            border: 2px solid #b45309;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4), inset 0 2px 2px rgba(255,255,255,0.2);
+            transition: all 0.2s;
+        }
+        .action-btn:hover {
+            background: linear-gradient(to bottom, #b45309, #92400e);
+            transform: translateY(-2px);
+        }
+        .action-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.4), inset 0 2px 2px rgba(0,0,0,0.5);
+        }
+        
+        /* Ad Panning Animation */
+        @keyframes panZoom {
+            0% { transform: scale(1.0) translate(0%, 0%); }
+            25% { transform: scale(1.1) translate(-2%, 2%); }
+            50% { transform: scale(1.15) translate(2%, -2%); }
+            75% { transform: scale(1.1) translate(-1%, -1%); }
+            100% { transform: scale(1.0) translate(0%, 0%); }
+        }
+        .ad-image {
+            animation: panZoom 15s ease-in-out infinite alternate;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Slide Transitions */
+        .game-transition-container {
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s ease;
+        }
+        .slide-out {
+            transform: translateX(-120%);
+            opacity: 0;
+        }
+        .slide-in-prep {
+            transform: translateX(120%);
+            opacity: 0;
+            transition: none; /* Snap to position instantly */
+        }
+        .slide-center {
+            transform: translateX(0);
+            opacity: 1;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.6s ease;
+        }
+    </style>
+</head>
+<body class="text-white overflow-hidden h-screen flex flex-col items-center">
+
+    <!-- Decorative Background Leaves -->
+    <div id="leaves-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+
+    <!-- Main Game Container -->
+    <div id="game-content" class="w-full max-w-lg h-full flex flex-col relative z-10">
+        
+        <!-- Header -->
+        <header class="w-full p-4 flex justify-between items-center shrink-0 pt-6">
+            <div class="flex flex-col">
+                <h1 class="text-3xl font-bold game-font tracking-wide text-orange-200 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">Harvest Words</h1>
+                <span class="text-xs text-orange-300/90 font-bold tracking-widest uppercase drop-shadow-sm mt-0.5">Happy Birthday Grampa!</span>
+            </div>
+            <div id="level-display" class="bg-amber-950/80 border-2 border-amber-700/80 px-4 py-1.5 rounded-full text-sm font-semibold shadow-lg text-amber-200">
+                Level 1
+            </div>
+        </header>
+
+        <!-- Dynamic Play Area (Transitions on level complete) -->
+        <div id="play-area" class="flex-1 w-full flex flex-col game-transition-container slide-center">
+            <!-- Crossword Grid Area -->
+            <div class="flex-1 w-full relative px-2 py-4 flex flex-col items-center justify-center overflow-hidden" id="grid-container">
+                <div id="word-grid" class="relative w-full h-full">
+                    <!-- Tiles dynamically injected here -->
+                </div>
+            </div>
+
+            <!-- Current Word Display -->
+            <div class="h-16 flex items-center justify-center shrink-0 w-full relative z-20">
+                <div id="current-word" class="text-4xl font-bold game-font tracking-[0.2em] text-amber-100 uppercase h-10 transition-colors duration-300 drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)]"></div>
+            </div>
+
+            <!-- Interactive Input Area (Big Circle) -->
+            <div class="w-full flex justify-center pb-10 shrink-0 relative z-30">
+                <div class="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px]">
+                    
+                    <!-- The Big Plate Background -->
+                    <div class="absolute inset-4 big-circle"></div>
+
+                    <!-- Canvas for drawing lines -->
+                    <canvas id="line-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-10"></canvas>
+                    
+                    <!-- Container for letters -->
+                    <div id="letters-container" class="absolute inset-0 z-20 touch-none"></div>
+                    
+                    <!-- Shuffle Button -->
+                    <button id="shuffle-btn" class="absolute -left-2 bottom-4 action-btn text-amber-100 p-3.5 rounded-full z-30 cursor-pointer" title="Shuffle Letters">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="16 3 21 3 21 8"></polyline>
+                            <line x1="4" y1="20" x2="21" y2="3"></line>
+                            <polyline points="21 16 21 21 16 21"></polyline>
+                            <line x1="15" y1="15" x2="21" y2="21"></line>
+                            <line x1="4" y1="4" x2="9" y2="9"></line>
+                        </svg>
+                    </button>
+
+                    <!-- Hints Button (simulated) -->
+                    <button id="hint-btn" class="absolute -right-2 bottom-4 action-btn text-amber-100 p-3.5 rounded-full z-30 cursor-pointer" title="Reveal a letter">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-24 left-1/2 transform -translate-x-1/2 bg-amber-900/90 border-2 border-amber-500 text-white px-6 py-3 rounded-full opacity-0 transition-opacity duration-300 pointer-events-none z-50 font-bold tracking-wide text-md hidden shadow-2xl backdrop-blur-md">
+        Message
+    </div>
+    
+    <!-- Game Completed Modal -->
+    <div id="win-modal" class="absolute inset-0 bg-black/60 z-50 items-center justify-center hidden backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-[#faf6f0] p-10 rounded-[2.5rem] flex flex-col items-center shadow-2xl scale-95 transition-transform duration-300 max-w-sm w-[85%] border border-amber-900/10 text-center">
+            <div class="text-5xl mb-6">🎂🦃🍂</div>
+            <h2 class="text-3xl font-bold mb-3 game-font text-amber-950">Happy Birthday Grampa!</h2>
+            <p class="text-sm mb-8 text-amber-800/80 font-medium leading-relaxed">You've harvested all the words and completed all 20 levels. We love you!</p>
+            <button id="play-again-btn" class="bg-amber-800 text-amber-50 px-10 py-3.5 rounded-full font-bold text-lg shadow-sm hover:bg-amber-700 hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0 transition-all w-full game-font tracking-wide">
+                Play Again
+            </button>
+        </div>
+    </div>
+
+    <!-- Fake "Ad" Modal -->
+    <div id="ad-modal" class="absolute inset-0 bg-gradient-to-b from-[#451a03] to-black z-[60] flex flex-col hidden opacity-0 transition-opacity duration-500 overflow-hidden">
+        <div class="absolute top-6 right-6 z-20">
+            <button id="skip-ad-btn" class="bg-black/60 text-white/90 border border-white/40 px-5 py-2.5 rounded-full font-bold text-sm shadow-lg hover:bg-black/80 backdrop-blur-md transition-all uppercase tracking-wide">
+                Skip Ad ⏭
+            </button>
+        </div>
+        <div class="absolute inset-0 z-0 flex items-center justify-center p-4">
+            <img src="media-08EB1B03-6FBB-4BCE-BD06-F95E96C5E8F5.jpg" onerror="this.onerror=null; this.src='https://placehold.co/800x1200/451a03/fde68a?text=Turkey+Drawing\n(Image+Loading+Error)'" class="ad-image drop-shadow-2xl" alt="Grandpa's Turkey Drawing">
+        </div>
+        <div class="absolute bottom-8 left-0 right-0 z-10 text-center pointer-events-none">
+             <div class="bg-black/70 text-white/90 text-sm py-1.5 px-4 inline-block rounded-full backdrop-blur-sm border border-white/20">Sponsored by Rocky Capobianco</div>
+        </div>
+    </div>
+
+    <script>
+        // -----------------------------
+        // Game Data (20 Levels)
+        // -----------------------------
+        const levels = [
+            { letters: "PIE", words: ["PIE"] },
+            { letters: "YAM", words: ["YAM", "MAY"] },
+            { letters: "FALL", words: ["FALL", "ALL"] },
+            { letters: "CORN", words: ["CORN", "CON"] },
+            { letters: "BAKE", words: ["BAKE", "BEAK"] },
+            { letters: "MEAT", words: ["MEAT", "TEAM", "TAME", "MAT", "EAT", "TEA"] },
+            { letters: "GRAVY", words: ["GRAVY", "GRAY", "RAY"] },
+            { letters: "MAIZE", words: ["MAIZE", "MAZE", "AIM"] },
+            { letters: "FEAST", words: ["FEAST", "SEAT", "FAST", "EAST", "EAT", "TEA", "SEA", "SET"] },
+            { letters: "ROAST", words: ["ROAST", "STAR", "SOAR", "OARS", "RAT", "ART", "TAR", "OAR"] },
+            { letters: "TURKEY", words: ["TURKEY", "TRUE", "TREK", "KEY", "TRY", "RUT"] },
+            { letters: "BOUNTY", words: ["BOUNTY", "BOUT", "BUY", "OUT", "BUT", "BOY", "NUT", "TUB"] },
+            { letters: "THANKS", words: ["THANKS", "THANK", "TANK", "ANTS", "HATS", "ASH", "ANT", "HAT"] },
+            { letters: "FAMILY", words: ["FAMILY", "FILM", "FAIL", "MAIL", "FLY", "AIM"] },
+            { letters: "DINNER", words: ["DINNER", "INNER", "DINER", "RIDE", "REND", "RED", "END", "DEN"] },
+            { letters: "GOBBLE", words: ["GOBBLE", "GLOBE", "BLOG", "BOG", "LOG", "LEG", "GEL"] },
+            { letters: "AUTUMN", words: ["AUTUMN", "TUNA", "AUNT", "NUT", "MAT", "MAN", "ANT"] },
+            { letters: "GATHER", words: ["GATHER", "HEART", "GREAT", "EARTH", "HEAR", "HATE", "RATE", "TEAR", "GEAR", "GATE", "THE", "HER", "RAT", "ART", "HAT"] },
+            { letters: "APPLES", words: ["APPLES", "APPLE", "PALE", "PEAS", "LEAP", "SEAL", "SEA", "SAP", "PEA", "PAL"] },
+            { letters: "HARVEST", words: ["HARVEST", "STARVE", "HEART", "EARTH", "SHARE", "TRASH", "VAST", "HAVE", "STAR", "RATS", "EATS", "HAT", "RAT", "ART", "EAR"] }
+        ];
+
+        // -----------------------------
+        // Game State
+        // -----------------------------
+        let currentLevelIndex = 0;
+        let foundWords = [];
+        let currentLettersArray = [];
+        
+        // Grid Layout State
+        let currentLayout = null;
+        let uniqueCells = []; // Maps grid coordinates to UI elements
+
+        // Canvas Drawing State
+        let isDrawing = false;
+        let selectedPath = []; // Array of indices
+        let currentPointerPos = { x: 0, y: 0 };
+        let letterNodes = []; // { x, y, char, radius, el, index }
+
+        // DOM Elements
+        const gameContent = document.getElementById('game-content');
+        const playArea = document.getElementById('play-area');
+        const gridContainer = document.getElementById('grid-container');
+        const gridEl = document.getElementById('word-grid');
+        const levelDisplayEl = document.getElementById('level-display');
+        const currentWordEl = document.getElementById('current-word');
+        const lettersContainer = document.getElementById('letters-container');
+        const canvas = document.getElementById('line-canvas');
+        const ctx = canvas.getContext('2d');
+        const toastEl = document.getElementById('toast');
+        const winModal = document.getElementById('win-modal');
+        const adModal = document.getElementById('ad-modal');
+
+        // -----------------------------
+        // Crossword Layout Engine
+        // -----------------------------
+        function buildLayout(wordsList) {
+            let words = [...wordsList].sort((a, b) => b.length - a.length);
+            let board = new Map();
+            let placements = [];
+
+            function get(x, y) { return board.get(`${x},${y}`); }
+            function set(x, y, char) { board.set(`${x},${y}`, char); }
+
+            function canPlace(word, startX, startY, isHoriz) {
+                // Check inline boundaries (must not extend the word unintentionally)
+                if (isHoriz) {
+                    if (get(startX - 1, startY) || get(startX + word.length, startY)) return false;
+                } else {
+                    if (get(startX, startY - 1) || get(startX, startY + word.length)) return false;
+                }
+
+                for (let i = 0; i < word.length; i++) {
+                    let x = startX + (isHoriz ? i : 0);
+                    let y = startY + (isHoriz ? 0 : i);
+                    let current = get(x, y);
+
+                    if (current && current !== word[i]) return false;
+
+                    if (!current) {
+                        // Check lateral neighbors to avoid unintended adjacent words
+                        if (isHoriz) {
+                            if (get(x, y - 1) || get(x, y + 1)) return false;
+                        } else {
+                            if (get(x - 1, y) || get(x + 1, y)) return false;
+                        }
+                    }
+                }
+                return true;
+            }
+
+            // Place first word horizontally
+            let first = words[0];
+            placements.push({ word: first, x: 0, y: 0, isHoriz: true });
+            for (let i = 0; i < first.length; i++) set(i, 0, first[i]);
+
+            // Place remaining words greedily aiming for intersections
+            for (let w = 1; w < words.length; w++) {
+                let word = words[w];
+                let best = null;
+                let bestScore = -9999;
+
+                for (let p of placements) {
+                    for (let i = 0; i < p.word.length; i++) {
+                        for (let j = 0; j < word.length; j++) {
+                            if (p.word[i] === word[j]) {
+                                let isHoriz = !p.isHoriz;
+                                let startX = p.x + (p.isHoriz ? i : 0) - (isHoriz ? j : 0);
+                                let startY = p.y + (p.isHoriz ? 0 : i) - (isHoriz ? 0 : j);
+
+                                if (canPlace(word, startX, startY, isHoriz)) {
+                                    // Score prefers compact layouts near origin, and more intersections
+                                    let intersections = 0;
+                                    for(let k = 0; k < word.length; k++) {
+                                        if (get(startX + (isHoriz ? k : 0), startY + (isHoriz ? 0 : k)) === word[k]) intersections++;
+                                    }
+                                    let score = (intersections * 5) - Math.abs(startX) - Math.abs(startY);
+                                    
+                                    if (score > bestScore) {
+                                        bestScore = score;
+                                        best = { word, x: startX, y: startY, isHoriz };
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (best) {
+                    placements.push(best);
+                    for (let i = 0; i < word.length; i++) {
+                        set(best.x + (best.isHoriz ? i : 0), best.y + (best.isHoriz ? 0 : i), word[i]);
+                    }
+                } else {
+                    // Fallback: stack disconnected word below with a safe gap
+                    let maxY = placements.reduce((max, p) => Math.max(max, p.y + (p.isHoriz ? 1 : p.word.length)), 0);
+                    placements.push({ word, x: 0, y: maxY + 1, isHoriz: true });
+                    for (let i = 0; i < word.length; i++) set(i, maxY + 1, word[i]);
+                }
+            }
+
+            // Normalize coordinates to 0,0 bounding box
+            let minX = Math.min(...placements.map(p => p.x));
+            let minY = Math.min(...placements.map(p => p.y));
+            let maxX = Math.max(...placements.map(p => p.x + (p.isHoriz ? p.word.length - 1 : 0)));
+            let maxY = Math.max(...placements.map(p => p.y + (p.isHoriz ? 0 : p.word.length - 1)));
+
+            placements.forEach(p => { p.x -= minX; p.y -= minY; });
+
+            return {
+                cols: maxX - minX + 1,
+                rows: maxY - minY + 1,
+                placements
+            };
+        }
+
+        // -----------------------------
+        // Initialization & Loading
+        // -----------------------------
+        function initGame() {
+            createLeaves();
+
+            const saved = localStorage.getItem('thanksgivingHarvestLevel');
+            if (saved !== null) {
+                currentLevelIndex = parseInt(saved, 10);
+                if (currentLevelIndex >= levels.length) currentLevelIndex = 0;
+            }
+
+            // Event Listeners
+            document.getElementById('shuffle-btn').addEventListener('click', () => {
+                shuffleArray(currentLettersArray);
+                renderLetters();
+            });
+            
+            document.getElementById('hint-btn').addEventListener('click', () => {
+                showToast("Keep trying! The harvest takes patience.");
+            });
+
+            document.getElementById('play-again-btn').addEventListener('click', () => {
+                winModal.style.display = 'none';
+                currentLevelIndex = 0;
+                localStorage.setItem('thanksgivingHarvestLevel', 0);
+                loadLevel(0);
+            });
+
+            document.getElementById('skip-ad-btn').addEventListener('click', () => {
+                adModal.classList.remove('opacity-100');
+                setTimeout(() => {
+                    adModal.style.display = 'none';
+                    // Slide in the prepared next level
+                    playArea.classList.remove('slide-in-prep');
+                    playArea.classList.add('slide-center');
+                }, 500); // Wait for ad fade transition
+            });
+
+            window.addEventListener('resize', () => {
+                renderGrid(); // recalculate sizes
+                updateCanvasSize();
+                updateLetterNodesPosition();
+            });
+
+            // Drawing Events attached to the container
+            lettersContainer.addEventListener('mousedown', handlePointerDown, { passive: false });
+            lettersContainer.addEventListener('touchstart', handlePointerDown, { passive: false });
+            window.addEventListener('mousemove', handlePointerMove, { passive: false });
+            window.addEventListener('touchmove', handlePointerMove, { passive: false });
+            window.addEventListener('mouseup', handlePointerUp);
+            window.addEventListener('touchend', handlePointerUp);
+
+            loadLevel(currentLevelIndex);
+        }
+
+        function loadLevel(index) {
+            foundWords = [];
+            currentLevelIndex = index;
+            const levelData = levels[index];
+            
+            levelDisplayEl.textContent = `Level ${index + 1}`;
+            currentWordEl.textContent = '';
+            
+            // Build Crossword Data
+            currentLayout = buildLayout(levelData.words);
+            
+            // Map logical placements to unique grid cells
+            uniqueCells = [];
+            let cellMap = new Map();
+            currentLayout.placements.forEach(p => {
+                for(let i=0; i<p.word.length; i++) {
+                    let cx = p.x + (p.isHoriz ? i : 0);
+                    let cy = p.y + (p.isHoriz ? 0 : i);
+                    let key = `${cx},${cy}`;
+                    if (!cellMap.has(key)) {
+                        cellMap.set(key, { char: p.word[i], x: cx, y: cy, words: [] });
+                    }
+                    cellMap.get(key).words.push(p.word);
+                }
+            });
+            uniqueCells = Array.from(cellMap.values());
+
+            renderGrid();
+
+            // Initialize Letters
+            currentLettersArray = levelData.letters.split('');
+            shuffleArray(currentLettersArray);
+            renderLetters();
+        }
+
+        // -----------------------------
+        // UI Rendering logic
+        // -----------------------------
+        function renderGrid() {
+            gridEl.innerHTML = '';
+            if(!currentLayout) return;
+
+            const containerW = gridContainer.clientWidth;
+            const containerH = gridContainer.clientHeight;
+            
+            // Add safe padding
+            const padding = 20; 
+            const availableW = containerW - padding;
+            const availableH = containerH - padding;
+            
+            // Calculate max possible cell size
+            const maxCellSize = Math.min(window.innerWidth < 400 ? 36 : 46, availableW / 3); 
+            let cellSize = Math.min(
+                availableW / currentLayout.cols,
+                availableH / currentLayout.rows,
+                maxCellSize
+            );
+            
+            const gridW = cellSize * currentLayout.cols;
+            const gridH = cellSize * currentLayout.rows;
+            
+            // Center the grid dynamically
+            const offsetX = (containerW - gridW) / 2;
+            const offsetY = (containerH - gridH) / 2;
+
+            uniqueCells.forEach(cell => {
+                const div = document.createElement('div');
+                div.className = 'tile tile-hidden text-2xl sm:text-3xl';
+                
+                // Gap between tiles
+                const gap = 3; 
+                div.style.width = `${cellSize - gap}px`;
+                div.style.height = `${cellSize - gap}px`;
+                div.style.left = `${offsetX + cell.x * cellSize + gap/2}px`;
+                div.style.top = `${offsetY + cell.y * cellSize + gap/2}px`;
+                
+                // Store data
+                div.dataset.char = cell.char;
+                div.dataset.words = cell.words.join(',');
+                
+                // If word is already found (useful for resizes), show it
+                let isRevealed = cell.words.some(w => foundWords.includes(w));
+                if(isRevealed) {
+                    div.textContent = cell.char;
+                    div.classList.remove('tile-hidden');
+                    div.classList.add('tile-revealed');
+                }
+
+                gridEl.appendChild(div);
+                cell.el = div; // store reference
+            });
+        }
+
+        function renderLetters() {
+            lettersContainer.innerHTML = '';
+            const numLetters = currentLettersArray.length;
+            const radius = 35; // percentage distance from center
+            const center = 50;
+
+            currentLettersArray.forEach((char, i) => {
+                const angle = (i * (2 * Math.PI) / numLetters) - (Math.PI / 2);
+                const x = center + radius * Math.cos(angle);
+                const y = center + radius * Math.sin(angle);
+
+                const span = document.createElement('span');
+                span.className = 'letter-node game-font text-3xl sm:text-4xl';
+                span.style.left = `${x}%`;
+                span.style.top = `${y}%`;
+                span.textContent = char;
+                span.dataset.char = char;
+                span.dataset.index = i;
+                
+                lettersContainer.appendChild(span);
+            });
+
+            setTimeout(() => {
+                updateCanvasSize();
+                updateLetterNodesPosition();
+            }, 50);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // -----------------------------
+        // Drawing & Interaction Logic
+        // -----------------------------
+        function updateCanvasSize() {
+            const rect = lettersContainer.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+
+        function updateLetterNodesPosition() {
+            const rect = lettersContainer.getBoundingClientRect();
+            const nodes = document.querySelectorAll('.letter-node');
+            
+            letterNodes = Array.from(nodes).map(node => {
+                const nodeRect = node.getBoundingClientRect();
+                return {
+                    char: node.dataset.char,
+                    index: parseInt(node.dataset.index, 10),
+                    x: (nodeRect.left + nodeRect.width / 2) - rect.left,
+                    y: (nodeRect.top + nodeRect.height / 2) - rect.top,
+                    radius: Math.max(nodeRect.width, 40) / 2, // touch target size
+                    el: node
+                };
+            });
+        }
+
+        function getPointerPos(e) {
+            const rect = lettersContainer.getBoundingClientRect();
+            let clientX, clientY;
+            
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else if (e.changedTouches && e.changedTouches.length > 0) {
+                clientX = e.changedTouches[0].clientX;
+                clientY = e.changedTouches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function handlePointerDown(e) {
+            if (e.type === 'mousedown' && e.button !== 0) return;
+            
+            const pos = getPointerPos(e);
+            // Relax hit detection slightly for mobile
+            const hitNode = letterNodes.find(n => Math.hypot(n.x - pos.x, n.y - pos.y) < n.radius + 15);
+            
+            if (hitNode) {
+                e.preventDefault(); 
+                isDrawing = true;
+                selectedPath = [hitNode.index];
+                currentPointerPos = pos;
+                hitNode.el.classList.add('selected');
+                updateCurrentWordDisplay();
+                drawLines();
+            }
+        }
+
+        function handlePointerMove(e) {
+            if (!isDrawing) return;
+            if (e.type === 'touchmove') e.preventDefault();
+            
+            currentPointerPos = getPointerPos(e);
+            const hitNode = letterNodes.find(n => Math.hypot(n.x - currentPointerPos.x, n.y - currentPointerPos.y) < n.radius + 15);
+            
+            if (hitNode) {
+                const pathIndex = selectedPath.indexOf(hitNode.index);
+                if (pathIndex === -1) {
+                    // Add
+                    selectedPath.push(hitNode.index);
+                    hitNode.el.classList.add('selected');
+                    updateCurrentWordDisplay();
+                } else if (pathIndex === selectedPath.length - 2) {
+                    // Backtrack
+                    const removedIndex = selectedPath.pop();
+                    letterNodes[removedIndex].el.classList.remove('selected');
+                    updateCurrentWordDisplay();
+                }
+            }
+            drawLines();
+        }
+
+        function handlePointerUp(e) {
+            if (!isDrawing) return;
+            isDrawing = false;
+            
+            const formedWord = selectedPath.map(idx => letterNodes[idx].char).join('');
+            processWord(formedWord);
+            
+            selectedPath = [];
+            letterNodes.forEach(n => n.el.classList.remove('selected'));
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawLines() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (selectedPath.length === 0) return;
+            
+            ctx.lineWidth = 14;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = '#fde68a'; // glowing inner line
+            
+            // Draw outer shadow/glow
+            ctx.shadowColor = '#f59e0b';
+            ctx.shadowBlur = 20;
+            
+            ctx.beginPath();
+            const firstNode = letterNodes[selectedPath[0]];
+            ctx.moveTo(firstNode.x, firstNode.y);
+            
+            for (let i = 1; i < selectedPath.length; i++) {
+                const node = letterNodes[selectedPath[i]];
+                ctx.lineTo(node.x, node.y);
+            }
+            ctx.lineTo(currentPointerPos.x, currentPointerPos.y);
+            
+            ctx.stroke();
+            
+            // Reset and draw inner core to make it look like a neon tube
+            ctx.shadowBlur = 0;
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = '#fff';
+            ctx.stroke();
+        }
+
+        function updateCurrentWordDisplay() {
+            currentWordEl.textContent = selectedPath.map(idx => letterNodes[idx].char).join('');
+            currentWordEl.classList.remove('shake');
+        }
+
+        // -----------------------------
+        // Game Logic & Feedback
+        // -----------------------------
+        function processWord(word) {
+            if (word.length < 2) {
+                currentWordEl.textContent = '';
+                return;
+            }
+
+            const levelData = levels[currentLevelIndex];
+            
+            if (levelData.words.includes(word)) {
+                if (foundWords.includes(word)) {
+                    showToast("Already found!");
+                    setTimeout(() => { if (!isDrawing) currentWordEl.textContent = ''; }, 600);
+                } else {
+                    // Valid new word
+                    foundWords.push(word);
+                    revealWordInGrid(word);
+                    setTimeout(() => { if (!isDrawing) currentWordEl.textContent = ''; }, 600);
+                    checkLevelComplete();
+                }
+            } else {
+                // Invalid word
+                currentWordEl.classList.add('shake');
+                setTimeout(() => { if(!isDrawing) currentWordEl.textContent = ''; }, 500);
+            }
+        }
+
+        function revealWordInGrid(word) {
+            // Find all cells that belong to this word
+            const tilesToReveal = uniqueCells.filter(cell => cell.words.includes(word));
+            
+            // Sort them based on direction if possible, but for simplicity we'll just stagger them
+            tilesToReveal.forEach((cell, i) => {
+                if(cell.el.classList.contains('tile-hidden')) {
+                    setTimeout(() => {
+                        cell.el.textContent = cell.char;
+                        cell.el.classList.remove('tile-hidden');
+                        cell.el.classList.add('tile-revealed', 'pop');
+                    }, i * 150); // cascade
+                }
+            });
+        }
+
+        function checkLevelComplete() {
+            const levelData = levels[currentLevelIndex];
+            if (foundWords.length === levelData.words.length) {
+                setTimeout(() => showLevelComplete(), 1500); // Wait for animations
+            }
+        }
+
+        function showLevelComplete() {
+            const nextIdx = currentLevelIndex + 1;
+            localStorage.setItem('thanksgivingHarvestLevel', nextIdx);
+
+            if (nextIdx >= levels.length) {
+                winModal.style.display = 'flex';
+                setTimeout(() => winModal.classList.add('opacity-100'), 10);
+            } else {
+                nextLevelWithSlide();
+            }
+        }
+
+        function nextLevelWithSlide() {
+            // Slide out left
+            playArea.classList.remove('slide-center');
+            playArea.classList.add('slide-out');
+
+            // Wait for slide out animation
+            setTimeout(() => {
+                currentLevelIndex++;
+
+                if (currentLevelIndex % 3 === 0) {
+                    // Prep next level off-screen right
+                    loadLevel(currentLevelIndex);
+                    playArea.classList.remove('slide-out');
+                    playArea.classList.add('slide-in-prep');
+                    
+                    showAdModal();
+                } else {
+                    // Prep next level off-screen right
+                    playArea.classList.remove('slide-out');
+                    playArea.classList.add('slide-in-prep');
+                    
+                    loadLevel(currentLevelIndex);
+
+                    // Force browser reflow so it instantly applies the off-screen position 
+                    // before starting the slide-in animation
+                    void playArea.offsetWidth;
+
+                    // Slide in from right
+                    playArea.classList.remove('slide-in-prep');
+                    playArea.classList.add('slide-center');
+                }
+            }, 600); // 600ms matches the CSS transition time
+        }
+
+        function showAdModal() {
+            adModal.style.display = 'block';
+            setTimeout(() => adModal.classList.add('opacity-100'), 20);
+        }
+
+        // -----------------------------
+        // Utilities
+        // -----------------------------
+        let toastTimeout;
+        function showToast(msg) {
+            toastEl.textContent = msg;
+            toastEl.style.display = 'block';
+            void toastEl.offsetWidth; 
+            toastEl.classList.remove('hidden');
+            toastEl.classList.add('opacity-100');
+            
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toastEl.classList.remove('opacity-100');
+                setTimeout(() => { toastEl.style.display = 'none'; }, 300);
+            }, 1500);
+        }
+
+        function createLeaves() {
+            const container = document.getElementById('leaves-container');
+            const leaves = ['🍁', '🍂', '🍃', '🍁', '🍂'];
+            const numLeaves = 18;
+
+            for (let i = 0; i < numLeaves; i++) {
+                const leaf = document.createElement('div');
+                leaf.className = 'leaf';
+                leaf.textContent = leaves[Math.floor(Math.random() * leaves.length)];
+                
+                leaf.style.left = `${Math.random() * 100}%`;
+                const duration = 10 + Math.random() * 20;
+                leaf.style.animationDuration = `${duration}s`;
+                leaf.style.animationDelay = `${Math.random() * 15}s`;
+                leaf.style.fontSize = `${1.2 + Math.random() * 1.5}rem`;
+                
+                container.appendChild(leaf);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', initGame);
+
+    </script>
+</body>
+</html>
