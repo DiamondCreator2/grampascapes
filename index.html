@@ -187,8 +187,13 @@
                 <span class="text-xs text-orange-300/90 font-bold tracking-widest uppercase drop-shadow-sm mt-0.5">Happy Birthday Grampa!</span>
                 <span class="text-[10px] text-orange-200/80 font-medium tracking-wider mt-0.5">By: Garrett and Rocky</span>
             </div>
-            <div id="level-display" class="bg-amber-950/80 border-2 border-amber-700/80 px-4 py-1.5 rounded-full text-sm font-semibold shadow-lg text-amber-200">
-                Level 1
+            <div class="flex flex-col items-end gap-2">
+                <div id="level-display" class="bg-amber-950/80 border-2 border-amber-700/80 px-4 py-1.5 rounded-full text-sm font-semibold shadow-lg text-amber-200">
+                    Level 1
+                </div>
+                <button id="trigger-reset-btn" class="text-[10px] bg-red-900/60 text-red-200 px-2 py-1 rounded-md border border-red-800 hover:bg-red-800 transition shadow-sm font-semibold uppercase tracking-wider">
+                    Reset Game
+                </button>
             </div>
         </header>
 
@@ -208,7 +213,7 @@
 
             <!-- Interactive Input Area (Big Circle) -->
             <div class="w-full flex justify-center pb-12 sm:pb-16 pt-2 shrink-0 relative z-30">
-                <div class="relative w-[75vmin] h-[75vmin] max-w-[320px] max-h-[320px] sm:max-w-[350px] sm:max-h-[350px]">
+                <div class="relative w-[65vmin] h-[65vmin] max-w-[260px] max-h-[260px] sm:max-w-[280px] sm:max-h-[280px]">
                     
                     <!-- The Big Plate Background -->
                     <div class="absolute inset-4 big-circle"></div>
@@ -275,6 +280,19 @@
         </div>
     </div>
 
+    <!-- Reset Confirm Modal -->
+    <div id="reset-modal" class="absolute inset-0 bg-black/60 z-[70] hidden items-center justify-center backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div class="bg-[#faf6f0] p-6 rounded-3xl flex flex-col items-center shadow-2xl max-w-[280px] w-full border border-amber-900/10 text-center transform scale-95 transition-transform duration-300" id="reset-modal-content">
+            <div class="text-4xl mb-3">⚠️</div>
+            <h3 class="text-2xl font-bold mb-2 game-font text-red-800">Reset Game?</h3>
+            <p class="text-sm mb-6 text-amber-900/80 font-medium">This will erase all your progress and return you to Level 1. Are you sure?</p>
+            <div class="flex gap-3 w-full">
+                <button id="cancel-reset-btn" class="flex-1 bg-gray-300 text-gray-800 py-3 rounded-full text-sm font-bold hover:bg-gray-400 transition">Cancel</button>
+                <button id="confirm-reset-btn" class="flex-1 bg-red-700 text-white py-3 rounded-full text-sm font-bold hover:bg-red-800 shadow-md transition">Reset</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // -----------------------------
         // Game Data (20 Levels)
@@ -333,6 +351,8 @@
         const toastEl = document.getElementById('toast');
         const winModal = document.getElementById('win-modal');
         const adModal = document.getElementById('ad-modal');
+        const resetModal = document.getElementById('reset-modal');
+        const resetModalContent = document.getElementById('reset-modal-content');
 
         // -----------------------------
         // Crossword Layout Engine
@@ -505,6 +525,45 @@
                 }, 500); // Wait for ad fade transition
             });
 
+            // Reset feature listeners
+            document.getElementById('trigger-reset-btn').addEventListener('click', () => {
+                resetModal.style.display = 'flex';
+                // Trigger reflow
+                void resetModal.offsetWidth;
+                resetModal.classList.add('opacity-100');
+                resetModalContent.classList.remove('scale-95');
+                resetModalContent.classList.add('scale-100');
+            });
+
+            document.getElementById('cancel-reset-btn').addEventListener('click', () => {
+                resetModal.classList.remove('opacity-100');
+                resetModalContent.classList.remove('scale-100');
+                resetModalContent.classList.add('scale-95');
+                setTimeout(() => { resetModal.style.display = 'none'; }, 300);
+            });
+
+            document.getElementById('confirm-reset-btn').addEventListener('click', () => {
+                resetModal.classList.remove('opacity-100');
+                resetModalContent.classList.remove('scale-100');
+                resetModalContent.classList.add('scale-95');
+                setTimeout(() => { resetModal.style.display = 'none'; }, 300);
+                
+                // Perform the reset
+                localStorage.removeItem('thanksgivingHarvestLevel');
+                currentLevelIndex = 0;
+                
+                // Give a neat slide transition backwards
+                playArea.classList.remove('slide-center');
+                playArea.classList.add('slide-in-prep'); // Snap it off screen right
+                void playArea.offsetWidth;
+                
+                loadLevel(0);
+                showToast("Game Reset!");
+                
+                playArea.classList.remove('slide-in-prep');
+                playArea.classList.add('slide-center'); // Slide in from right
+            });
+
             window.addEventListener('resize', () => {
                 renderGrid(); // recalculate sizes
                 updateCanvasSize();
@@ -568,18 +627,19 @@
             const containerW = gridContainer.clientWidth;
             const containerH = gridContainer.clientHeight;
             
-            // Add safe padding
+            // Adjusted safe padding to ensure no cut-offs while maximizing space
             const padding = 20; 
             const availableW = containerW - padding;
             const availableH = containerH - padding;
             
-            // Calculate max possible cell size
-            const maxCellSize = Math.min(window.innerWidth < 400 ? 36 : 46, availableW / 3); 
-            let cellSize = Math.min(
+            // Significantly increased max cell size so sparse levels have big boxes
+            const maxCellSize = window.innerWidth < 400 ? 80 : 100; 
+            
+            let cellSize = Math.floor(Math.min(
                 availableW / currentLayout.cols,
                 availableH / currentLayout.rows,
                 maxCellSize
-            );
+            ));
             
             const gridW = cellSize * currentLayout.cols;
             const gridH = cellSize * currentLayout.rows;
@@ -590,7 +650,7 @@
 
             uniqueCells.forEach(cell => {
                 const div = document.createElement('div');
-                div.className = 'tile tile-hidden text-2xl sm:text-3xl';
+                div.className = 'tile tile-hidden font-bold';
                 
                 // Gap between tiles
                 const gap = 3; 
@@ -598,6 +658,7 @@
                 div.style.height = `${cellSize - gap}px`;
                 div.style.left = `${offsetX + cell.x * cellSize + gap/2}px`;
                 div.style.top = `${offsetY + cell.y * cellSize + gap/2}px`;
+                div.style.fontSize = `${cellSize * 0.55}px`; // Dynamically scale font with box size
                 
                 // Store data
                 div.dataset.char = cell.char;
