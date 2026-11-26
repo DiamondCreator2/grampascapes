@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GrampaScapes</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -200,19 +201,19 @@
         <!-- Dynamic Play Area (Transitions on level complete) -->
         <div id="play-area" class="flex-1 w-full flex flex-col game-transition-container slide-center">
             <!-- Crossword Grid Area -->
-            <div class="flex-1 w-full relative px-2 py-4 flex flex-col items-center justify-center overflow-hidden" id="grid-container">
+            <div class="flex-1 w-full relative px-2 py-2 flex flex-col items-center justify-center overflow-hidden" id="grid-container">
                 <div id="word-grid" class="relative w-full h-full">
                     <!-- Tiles dynamically injected here -->
                 </div>
             </div>
 
             <!-- Current Word Display -->
-            <div class="h-16 flex items-center justify-center shrink-0 w-full relative z-20">
+            <div class="h-10 flex items-center justify-center shrink-0 w-full relative z-20 mb-2 mt-2">
                 <div id="current-word" class="text-4xl font-bold game-font tracking-[0.2em] text-amber-100 uppercase h-10 transition-colors duration-300 drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)]"></div>
             </div>
 
             <!-- Interactive Input Area (Big Circle) -->
-            <div class="w-full flex justify-center pb-12 sm:pb-16 pt-2 shrink-0 relative z-30">
+            <div class="w-full flex justify-center pb-12 sm:pb-16 shrink-0 relative z-30">
                 <div class="relative w-[65vmin] h-[65vmin] max-w-[260px] max-h-[260px] sm:max-w-[280px] sm:max-h-[280px]">
                     
                     <!-- The Big Plate Background -->
@@ -328,6 +329,11 @@
         let currentLettersArray = [];
         let levelHints = {}; // Stores generated hints so they don't change
         
+        // Audio State
+        let audioInitialized = false;
+        let mainSynth = null;
+        let polySynth = null;
+
         // Grid Layout State
         let currentLayout = null;
         let uniqueCells = []; // Maps grid coordinates to UI elements
@@ -353,6 +359,61 @@
         const adModal = document.getElementById('ad-modal');
         const resetModal = document.getElementById('reset-modal');
         const resetModalContent = document.getElementById('reset-modal-content');
+
+        // -----------------------------
+        // Audio System
+        // -----------------------------
+        async function initAudio() {
+            if (audioInitialized) return;
+            await Tone.start();
+            
+            mainSynth = new Tone.Synth({
+                oscillator: { type: "sine" },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+            }).toDestination();
+            
+            polySynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "triangle" },
+                envelope: { attack: 0.05, decay: 0.2, sustain: 0.2, release: 1 }
+            }).toDestination();
+            
+            polySynth.volume.value = -5; // soften chords
+            mainSynth.volume.value = -2;
+            
+            audioInitialized = true;
+        }
+
+        function playSelectSound(length) {
+            if (!audioInitialized) return;
+            const notes = ["C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5", "D5", "E5"];
+            const note = notes[Math.min(length - 1, notes.length - 1)];
+            mainSynth.triggerAttackRelease(note, "16n");
+        }
+
+        function playErrorSound() {
+            if (!audioInitialized) return;
+            mainSynth.triggerAttackRelease("C2", "8n");
+        }
+
+        function playSuccessSound() {
+            if (!audioInitialized) return;
+            polySynth.triggerAttackRelease(["C4", "E4", "G4"], "8n");
+        }
+
+        function playAlreadyFoundSound() {
+            if (!audioInitialized) return;
+            mainSynth.triggerAttackRelease("G3", "8n");
+        }
+
+        function playLevelCompleteSound() {
+            if (!audioInitialized) return;
+            polySynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "2n");
+        }
+        
+        function playClickSound() {
+            if (!audioInitialized) return;
+            mainSynth.triggerAttackRelease("C4", "32n");
+        }
 
         // -----------------------------
         // Crossword Layout Engine
@@ -465,6 +526,10 @@
 
             // Prevent double-tap zoom via javascript as an extra fallback
             document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+            
+            // Initialize Audio on first interaction
+            document.body.addEventListener('mousedown', initAudio, { once: true });
+            document.body.addEventListener('touchstart', initAudio, { once: true });
 
             const saved = localStorage.getItem('thanksgivingHarvestLevel');
             if (saved !== null) {
@@ -474,11 +539,15 @@
 
             // Event Listeners
             document.getElementById('shuffle-btn').addEventListener('click', () => {
+                initAudio();
+                playClickSound();
                 shuffleArray(currentLettersArray);
                 renderLetters();
             });
             
             document.getElementById('hint-btn').addEventListener('click', () => {
+                initAudio();
+                playClickSound();
                 const levelData = levels[currentLevelIndex];
                 const unfoundWords = levelData.words.filter(w => !foundWords.includes(w));
                 
@@ -509,6 +578,7 @@
             });
 
             document.getElementById('play-again-btn').addEventListener('click', () => {
+                playClickSound();
                 winModal.style.display = 'none';
                 currentLevelIndex = 0;
                 localStorage.setItem('thanksgivingHarvestLevel', 0);
@@ -516,6 +586,7 @@
             });
 
             document.getElementById('skip-ad-btn').addEventListener('click', () => {
+                playClickSound();
                 adModal.classList.remove('opacity-100');
                 setTimeout(() => {
                     adModal.style.display = 'none';
@@ -527,6 +598,7 @@
 
             // Reset feature listeners
             document.getElementById('trigger-reset-btn').addEventListener('click', () => {
+                playClickSound();
                 resetModal.style.display = 'flex';
                 // Trigger reflow
                 void resetModal.offsetWidth;
@@ -536,6 +608,7 @@
             });
 
             document.getElementById('cancel-reset-btn').addEventListener('click', () => {
+                playClickSound();
                 resetModal.classList.remove('opacity-100');
                 resetModalContent.classList.remove('scale-100');
                 resetModalContent.classList.add('scale-95');
@@ -543,6 +616,7 @@
             });
 
             document.getElementById('confirm-reset-btn').addEventListener('click', () => {
+                playClickSound();
                 resetModal.classList.remove('opacity-100');
                 resetModalContent.classList.remove('scale-100');
                 resetModalContent.classList.add('scale-95');
@@ -624,11 +698,12 @@
             gridEl.innerHTML = '';
             if(!currentLayout) return;
 
-            const containerW = gridContainer.clientWidth;
-            const containerH = gridContainer.clientHeight;
+            // Use gridEl instead of gridContainer for dimensions to fix padding cut-off bugs
+            const containerW = gridEl.clientWidth;
+            const containerH = gridEl.clientHeight;
             
             // Adjusted safe padding to ensure no cut-offs while maximizing space
-            const padding = 20; 
+            const padding = 16; 
             const availableW = containerW - padding;
             const availableH = containerH - padding;
             
@@ -644,9 +719,10 @@
             const gridW = cellSize * currentLayout.cols;
             const gridH = cellSize * currentLayout.rows;
             
-            // Center the grid dynamically
+            // Center the grid dynamically, shifting slightly down to use space near the wheel
             const offsetX = (containerW - gridW) / 2;
-            const offsetY = (containerH - gridH) / 2;
+            const extraSpaceY = containerH - gridH;
+            const offsetY = (extraSpaceY / 2) + (extraSpaceY > 40 ? 15 : 0);
 
             uniqueCells.forEach(cell => {
                 const div = document.createElement('div');
@@ -761,6 +837,7 @@
 
         function handlePointerDown(e) {
             if (e.type === 'mousedown' && e.button !== 0) return;
+            initAudio(); // Ensure audio is ready
             
             const pos = getPointerPos(e);
             // Relax hit detection slightly for mobile
@@ -773,6 +850,7 @@
                 currentPointerPos = pos;
                 hitNode.el.classList.add('selected');
                 updateCurrentWordDisplay();
+                playSelectSound(selectedPath.length);
                 drawLines();
             }
         }
@@ -791,11 +869,13 @@
                     selectedPath.push(hitNode.index);
                     hitNode.el.classList.add('selected');
                     updateCurrentWordDisplay();
+                    playSelectSound(selectedPath.length);
                 } else if (pathIndex === selectedPath.length - 2) {
                     // Backtrack
                     const removedIndex = selectedPath.pop();
                     letterNodes[removedIndex].el.classList.remove('selected');
                     updateCurrentWordDisplay();
+                    playSelectSound(selectedPath.length); // Play sound on backtrack too
                 }
             }
             drawLines();
@@ -863,10 +943,12 @@
             
             if (levelData.words.includes(word)) {
                 if (foundWords.includes(word)) {
+                    playAlreadyFoundSound();
                     showToast("Already found!");
                     setTimeout(() => { if (!isDrawing) currentWordEl.textContent = ''; }, 600);
                 } else {
                     // Valid new word
+                    playSuccessSound();
                     foundWords.push(word);
                     revealWordInGrid(word);
                     setTimeout(() => { if (!isDrawing) currentWordEl.textContent = ''; }, 600);
@@ -874,6 +956,7 @@
                 }
             } else {
                 // Invalid word
+                playErrorSound();
                 currentWordEl.classList.add('shake');
                 setTimeout(() => { if(!isDrawing) currentWordEl.textContent = ''; }, 500);
             }
@@ -903,6 +986,7 @@
         }
 
         function showLevelComplete() {
+            playLevelCompleteSound();
             const nextIdx = currentLevelIndex + 1;
             localStorage.setItem('thanksgivingHarvestLevel', nextIdx);
 
