@@ -134,19 +134,21 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.4), inset 0 2px 2px rgba(0,0,0,0.5);
         }
         
-        /* Ad Panning Animation */
-        @keyframes panZoom {
+        /* Ad Active Panning Animation */
+        @keyframes activePanZoom {
             0% { transform: scale(1.0) translate(0%, 0%); }
-            25% { transform: scale(1.1) translate(-2%, 2%); }
-            50% { transform: scale(1.15) translate(2%, -2%); }
-            75% { transform: scale(1.1) translate(-1%, -1%); }
+            20% { transform: scale(1.7) translate(-10%, 15%); }
+            40% { transform: scale(1.4) translate(10%, -10%); }
+            60% { transform: scale(2.0) translate(-15%, -5%); }
+            80% { transform: scale(1.5) translate(15%, 15%); }
             100% { transform: scale(1.0) translate(0%, 0%); }
         }
         .ad-image {
-            animation: panZoom 15s ease-in-out infinite alternate;
+            animation: activePanZoom 20s ease-in-out infinite alternate;
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            object-fit: cover;
+            object-position: center;
         }
 
         /* Slide Transitions */
@@ -203,8 +205,8 @@
             </div>
 
             <!-- Interactive Input Area (Big Circle) -->
-            <div class="w-full flex justify-center pb-10 shrink-0 relative z-30">
-                <div class="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px]">
+            <div class="w-full flex justify-center pb-12 sm:pb-16 pt-2 shrink-0 relative z-30">
+                <div class="relative w-[75vmin] h-[75vmin] max-w-[320px] max-h-[320px] sm:max-w-[350px] sm:max-h-[350px]">
                     
                     <!-- The Big Plate Background -->
                     <div class="absolute inset-4 big-circle"></div>
