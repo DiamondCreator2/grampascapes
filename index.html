@@ -308,6 +308,7 @@
         let currentLevelIndex = 0;
         let foundWords = [];
         let currentLettersArray = [];
+        let levelHints = {}; // Stores generated hints so they don't change
         
         // Grid Layout State
         let currentLayout = null;
@@ -458,7 +459,33 @@
             });
             
             document.getElementById('hint-btn').addEventListener('click', () => {
-                showToast("Keep trying! The harvest takes patience.");
+                const levelData = levels[currentLevelIndex];
+                const unfoundWords = levelData.words.filter(w => !foundWords.includes(w));
+                
+                if (unfoundWords.length > 0) {
+                    // Always target the first unfound word so players can't skip around
+                    const word = unfoundWords[0];
+                    
+                    // Generate and save the hint ONLY if we haven't created one for this word yet
+                    if (!levelHints[word]) {
+                        let hintArray = word.split('').map((char, i) => {
+                            if (i === 0) return char; // always reveal first letter
+                            // Randomly reveal roughly 30% of the other letters
+                            if (Math.random() < 0.3) return char;
+                            return '_';
+                        });
+                        
+                        // Ensure we didn't accidentally reveal the whole word
+                        if (!hintArray.includes('_') && hintArray.length > 1) {
+                            hintArray[hintArray.length - 1] = '_';
+                        }
+                        
+                        levelHints[word] = hintArray.join(' ');
+                    }
+                    
+                    // Show the persistently stored hint
+                    showToast("Hint: " + levelHints[word], 3500); // Show for 3.5 seconds
+                }
             });
 
             document.getElementById('play-again-btn').addEventListener('click', () => {
@@ -497,6 +524,7 @@
 
         function loadLevel(index) {
             foundWords = [];
+            levelHints = {}; // Reset hints for the new level
             currentLevelIndex = index;
             const levelData = levels[index];
             
@@ -868,7 +896,7 @@
         // Utilities
         // -----------------------------
         let toastTimeout;
-        function showToast(msg) {
+        function showToast(msg, duration = 1500) {
             toastEl.textContent = msg;
             toastEl.style.display = 'block';
             void toastEl.offsetWidth; 
@@ -879,7 +907,7 @@
             toastTimeout = setTimeout(() => {
                 toastEl.classList.remove('opacity-100');
                 setTimeout(() => { toastEl.style.display = 'none'; }, 300);
-            }, 1500);
+            }, duration);
         }
 
         function createLeaves() {
