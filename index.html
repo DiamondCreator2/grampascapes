@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Thanksgiving Harvest Words</title>
+    <title>GrampaScapes</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -11,6 +11,7 @@
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
             background: radial-gradient(circle at center, #92400e 0%, #451a03 100%);
+            touch-action: none; /* Prevents double-tap to zoom */
         }
 
         h1, .game-font {
@@ -182,8 +183,9 @@
         <!-- Header -->
         <header class="w-full p-4 flex justify-between items-center shrink-0 pt-6">
             <div class="flex flex-col">
-                <h1 class="text-3xl font-bold game-font tracking-wide text-orange-200 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">Harvest Words</h1>
+                <h1 class="text-3xl font-bold game-font tracking-wide text-orange-200 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">GrampaScapes</h1>
                 <span class="text-xs text-orange-300/90 font-bold tracking-widest uppercase drop-shadow-sm mt-0.5">Happy Birthday Grampa!</span>
+                <span class="text-[10px] text-orange-200/80 font-medium tracking-wider mt-0.5">By: Garrett and Rocky</span>
             </div>
             <div id="level-display" class="bg-amber-950/80 border-2 border-amber-700/80 px-4 py-1.5 rounded-full text-sm font-semibold shadow-lg text-amber-200">
                 Level 1
@@ -439,6 +441,9 @@
         // -----------------------------
         function initGame() {
             createLeaves();
+
+            // Prevent double-tap zoom via javascript as an extra fallback
+            document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
 
             const saved = localStorage.getItem('thanksgivingHarvestLevel');
             if (saved !== null) {
